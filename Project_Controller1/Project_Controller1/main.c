@@ -1,5 +1,3 @@
-
-
 #include <avr/io.h>
 #define F_CPU 1000000
 #include <util/delay.h>
@@ -13,6 +11,7 @@ char MSG[20];
 unsigned char MSGSIZE;
 int vert;
 int horiz;
+
 enum KeyState{WAIT, ONE, ZERO, ENTER, DELETE};
 int KeyBoardTick(int KeyState){
 	switch(KeyState){
