@@ -1,4 +1,10 @@
 /*
+ * CS120B_LAB11_PART1.c
+ *
+ * Created: 5/29/2019 10:15:05 AM
+ * Author : ucrcse
+ */ 
+/*
  * CS120B_LAB11_PART3.c
  *
  * Created: 5/27/2019 11:58:49 PM
@@ -108,8 +114,28 @@ int main(void)
 		}
 		*/
 		unsigned char x = GetKeypadKey();
-		if(x != '\0')
-			LCD_WriteData(x);
+		switch (x) {
+			case '\0': PORTB = 0x1F; break; // All 5 LEDs on
+			case '1': PORTB = 0x01; break; // hex equivalent
+			case '2': PORTB = 0x02; break;
+			case '3': PORTB = 3; break;
+			case '4': PORTB = 4; break;
+			case '5': PORTB = 5; break;
+			case '6': PORTB = 6; break;
+			case '7': PORTB = 7; break;
+			case '8': PORTB = 8; break;
+			case '9': PORTB = 9; break;
+			case 'A': PORTB = 10; break;
+			case 'B': PORTB = 11; break;
+			case 'C': PORTB = 12; break;
+			// . . . ***** FINISH *****
+
+			case 'D': PORTB = 0x0D; break;
+			case '*': PORTB = 0x0E; break;
+			case '0': PORTB = 0x00; break;
+			case '#': PORTB = 0x0F; break;
+			default: PORTB = 0x1B; break; // Should never occur. Middle LED off.
+		}
 		while(!TimerFlag){}
 			TimerFlag = 0;
 		//Sleep();
