@@ -14,12 +14,16 @@ unsigned char joyRight;
 //Global variables for creating messages================================================
 unsigned char keyChar;
 unsigned short keyCharLen;
-char TOPMSG[17];
-char BOTMSG[17];
+char TOPMSG[33];
+char BOTMSG[33];
 char MSG[17] = "               ";
 char MSG2[] = "HELLO WORLD";
+unsigned char up;
 unsigned char MSGSIZE;
 unsigned MSGSPOT;
+static unsigned char t;
+unsigned char shiftRightUp;
+unsigned char shiftRightDown;
 //Global variables to tell if the vertical or horizontal is greater than threshold======
 int vert;
 int horiz;
@@ -33,14 +37,31 @@ typedef struct _task {
 
 enum LCDSTATE{DISPLAY};
 int LCDTICK(int LCDSTATE){
-	static unsigned char t = 0;
 	LCD_DisplayString(1, MSG);
 	LCD_DisplayString(17, MSG2);
-	if(joyRight == 0x01 && t < 15){
+	
+	if(joyUp == 0x01 && up == 0){
+		t = 0;
+		up = 1;
+	}
+	if(joyDown == 0x01 && up == 1){
+		t = 16;
+		up = 0;
+	}
+	
+	if(joyRight == 0x01 && t < 15 && up == 1){
 		t++;
 		joyRight = 0;
 	}
-	if(joyLeft == 0x01 && t > 1){
+	if(joyLeft == 0x01 && t > 0 && up == 1){
+		t--;
+		joyLeft = 0;
+	}
+	if(joyRight == 0x01 && t < 32 && up == 0){
+		t++;
+		joyRight = 0;
+	}
+	if(joyLeft == 0x01 && t > 16 && up == 0){
 		t--;
 		joyLeft = 0;
 	}
@@ -55,52 +76,54 @@ int LCDTICK(int LCDSTATE){
 
 
 //Keyboard function for entry into the message to be sent===============================
-enum KeyState{WAIT, ONE, ZERO, ENTER};
+enum KeyState{WAIT, ONE, ZERO, ENTER, DELETE, SEND};
 int KeyBoardTick(int KeyState){
-	switch(KeyState){
-		case WAIT :
-			if((PINA & 0xF0) == 0x70){
-				keyChar = keyChar << 1;
-				keyChar |= 0x01;
-				KeyState = ONE;
-			}else if((PINA & 0xF0) == 0xB0){
-				keyChar = keyChar << 1;
-				KeyState = ZERO;
-			}else if((PINA & 0xF0) == 0xD0){
-				if(keyChar == 0x00)
-					MSG[MSGSIZE] = 0x20;
-				MSGSIZE++;
-				KeyState = ENTER;
-			}else{
-				KeyState = WAIT;
-			}
-		break;
-		case ONE :
-			if((PINA & 0xF0) == 0x70){
-				KeyState = ONE;
-				//LCD_DisplayString(1, "HELLO");
-			}else
-				KeyState = WAIT;
-		break;
-		case ZERO :
-			if((PINA & 0xF0) == 0xB0){
-				KeyState = ZERO;
-			}else
-				KeyState = WAIT;
-		break;
-		case ENTER :
-			if((PINA & 0xF0) == 0xD0){
-				KeyState = ENTER;
-			}else{
-				KeyState = WAIT;
-				keyChar = 0x00;
-			}
-		break;
-		default:
-		KeyState = WAIT;
-		break;
+	if(t < 16){
+		switch(KeyState){
+			case WAIT :
+				if((PINA & 0xF0) == 0x70){
+					keyChar = keyChar << 1;
+					keyChar |= 0x01;
+					KeyState = ONE;
+				}else if((PINA & 0xF0) == 0xB0){
+					keyChar = keyChar << 1;
+					KeyState = ZERO;
+				}else if((PINA & 0xF0) == 0xD0){
+					if(keyChar == 0x00)
+						MSG[t] = 0x20;
+					t++;
+					KeyState = ENTER;
+				}else{
+					KeyState = WAIT;
+				}
+			break;
+			case ONE :
+				if((PINA & 0xF0) == 0x70){
+					KeyState = ONE;
+					//LCD_DisplayString(1, "HELLO");
+				}else
+					KeyState = WAIT;
+			break;
+			case ZERO :
+				if((PINA & 0xF0) == 0xB0){
+					KeyState = ZERO;
+				}else
+					KeyState = WAIT;
+			break;
+			case ENTER :
+				if((PINA & 0xF0) == 0xD0){
+					KeyState = ENTER;
+				}else{
+					KeyState = WAIT;
+					keyChar = 0x00;
+				}
+			break;
+			default:
+			KeyState = WAIT;
+			break;
+		}
+		MSG[t] = keyChar;
 	}
-	MSG[MSGSIZE] = keyChar;
 	return KeyState;
 }
 
@@ -142,7 +165,7 @@ int JoyStickTick(int JoyState){
 	if (horiz < 300){
 		joyLeft = 0x01;
 	}
-	if (vert > 520 + 500){
+	if (vert > 520 + 300){
 		joyUp = 0x01;
 	}
 	if (vert < 300){
@@ -156,7 +179,6 @@ int JoyStickTick(int JoyState){
 		joyLeft = 0;
 		joyRight = 0;
 	}
-	PORTD = horiz;
 	return JoyState;
 }
 
@@ -171,6 +193,8 @@ int JoyStickTick(int JoyState){
 
 int main(void)
 {
+	up = 1;
+	t = 0;
 	keyChar = 0x00;
 	MSGSPOT = 0;
 	MSGSIZE = 0;
@@ -184,20 +208,21 @@ int main(void)
 	task *tasks[] = { &task1, &task2, &task3};
 	//task1 init
 	task1.state = -1;
-	task1.period = 100;
-	task1.elapsedTime = 100;
+	task1.period = 20;
+	task1.elapsedTime = 20;
 	task1.TickFct = &JoyStickTick;
 	task2.state = -1;
-	task2.period = 40;
-	task2.elapsedTime = 40;
+	task2.period = 20;
+	task2.elapsedTime = 20;
 	task2.TickFct = &KeyBoardTick;
 	task3.state = -1;
-	task3.period = 200;
-	task3.elapsedTime = 200;
+	task3.period = 100;
+	task3.elapsedTime = 100;
 	task3.TickFct = &LCDTICK;
 	TimerSet(20);
 	TimerOn();
 	LCD_init();
+	LCD_Cursor(0);
 	while(1)
 	{
 		for ( unsigned i = 0; i < 3; i++ ) {
