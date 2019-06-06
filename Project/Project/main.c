@@ -18,6 +18,7 @@ unsigned short keyCharLen;
 char MSG[17]  = "               ";
 char MSG2[17] = "               ";
 char WAITMESSAGE[17] = "WAIT           ";
+char DONEMESSAGE[17] = "DONE           ";
 unsigned char up;
 unsigned char MSGSIZE;
 unsigned MSGSPOT;
@@ -44,14 +45,15 @@ unsigned char READYTOSEND;
 unsigned char READYTORECEIVE;
 //Sends and receives strings via USART==================================================
 void receive_string(char* stringswapped){
-	
+	static unsigned char flush;
+
 	for(unsigned j = 0; j < 16; j++){
 		MSG2[j] = ' ';
 	}
 	MSG2[16] = 0;
 	for(unsigned j = 0; j < 16; j++){
 		while ( !(UCSR0A & (1 << RXC0)) );
-		stringswapped[j] = UDR0;
+		MSG2[j] = UDR0;
 		/*
 		if(stringswapped[j] == 0 && j < 15)
 			stringswapped[j] = ' ';
@@ -59,16 +61,19 @@ void receive_string(char* stringswapped){
 			stringswapped[j] = 0;
 			*/
 	}
+	while ( UCSR0A & (1 << RXC0) ) { flush = UDR0; }
+	LCD_Cursor(0);
 }
 void transmit_string(char* stringswapped){
 	for(unsigned j = 0; j < 16; j++){
 		while( !(UCSR0A & (1 << UDRE0)) );
-			UDR0 = stringswapped[j];
+			UDR0 = MSG[j];
 	}
 	for(unsigned j = 0; j < 16; j++){
 		MSG[j] = ' ';
 	}
 	MSG[16] = 0;
+	LCD_Cursor(0);
 }
 
 enum USARTSTATE{WAITSHAKE, WAITTRANSMIT, WAITRECEIVE, TRANSMIT, RECEIVE};
@@ -101,7 +106,6 @@ int USARTTICK(int USARTSTATE){
 				break;
 			}
 			if((PIND & 0x10) == 0x10){
-				PORTD = PORTD | 0x08;
 				USARTSTATE = RECEIVE;
 			}
 		break;
@@ -145,7 +149,7 @@ int LCDTICK(int LCDSTATE){
 				up = 0;
 			}
 	
-			if(joyRight == 0x01 && t < 15 && up == 1){
+			if(joyRight == 0x01 && t < 11 && up == 1){
 				keyChar = 0;
 				t++;
 				joyRight = 0;
@@ -166,49 +170,61 @@ int LCDTICK(int LCDSTATE){
 			LCD_Cursor(MSGSIZE + t + 1);
 			if(READYTOSEND == 1){
 				LCDSTATE = SENDING;
+				LCD_DisplayString(1, WAITMESSAGE);
 				break;
 			}
 			if(READYTORECEIVE == 1){
 				LCDSTATE = RECE;
+				LCD_DisplayString(1, WAITMESSAGE);
 				break;
 			}
 			LCDSTATE = DISPLAY;
 		break;
 		case SENDING :
-			LCD_DisplayString(1, WAITMESSAGE);
 			if(READYTOSEND == 1)
 				LCDSTATE = SENDING;
 			else{
+				LCD_DisplayString(1, DONEMESSAGE);
 				LCDSTATE = OKAY1;
 			}
 		break;
 		case RECE :
-			LCD_DisplayString(17, WAITMESSAGE);
 			if(READYTORECEIVE == 1)
 				LCDSTATE = RECE;
 			else{
-				LCDSTATE = OKAY1;
+				LCD_DisplayString(1, DONEMESSAGE);
+				LCDSTATE = OKAY2;
 			}
 		break;
 		case OKAY1 :
 			LCD_Cursor(5);
+			LCD_WriteData(3);
+			LCD_Cursor(6);
+			LCD_WriteData(2);
+			LCD_Cursor(7);
 			LCD_WriteData(1);
 			WAIT++;
-			if(WAIT < 2){
+			if(WAIT < 40){
 				LCDSTATE = OKAY1;
 			}else{
 				LCDSTATE = DISPLAY;
 			}
+			LCD_Cursor(0);
 		break;
 		case OKAY2 :
 			LCD_Cursor(5);
+			LCD_WriteData(3);
+			LCD_Cursor(6);
+			LCD_WriteData(2);
+			LCD_Cursor(7);
 			LCD_WriteData(1);
 			WAIT++;
-			if(WAIT < 2){
+			if(WAIT < 20){
 				LCDSTATE = OKAY2;
 			}else{
 				LCDSTATE = DISPLAY;
 			}
+			LCD_Cursor(0);
 		break;
 		default :
 			LCDSTATE = DISPLAY;
@@ -237,7 +253,8 @@ int KeyBoardTick(int KeyState){
 					if(keyChar == 0x00)
 						MSG[t] = 0x20;
 					keyChar = 0;
-					t++;
+					if(t < 11)
+						t++;
 					KeyState = ENTER;
 				}else if((PINA & 0xF0) == 0xE0){
 					KeyState = SEND;
@@ -306,6 +323,24 @@ void LCD_build(){
 	LCD_WriteData(0xFF);      //Load row 6 data
 	LCD_WriteData(0xFF);      //Load row 7 data
 	LCD_WriteData(0xFF);      //Load row 8 data
+	LCD_WriteCommand(0x50);       //Load the location where we want to store
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x00);      //Load row 1 data
+	LCD_WriteData(0x00);      //Load row 2 data
+	LCD_WriteData(0x24);      //Load row 4 data
+	LCD_WriteData(0x00);      //Load row 5 data
+	LCD_WriteData(0x42);      //Load row 6 data
+	LCD_WriteData(0x24);      //Load row 7 data
+	LCD_WriteData(0x18);      //Load row 8 data
+	LCD_WriteCommand(0x58);       //Load the location where we want to store
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x00);      //Load row 1 data
+	LCD_WriteData(0x00);      //Load row 2 data
+	LCD_WriteData(0x02);      //Load row 4 data
+	LCD_WriteData(0x00);      //Load row 5 data
+	LCD_WriteData(0x04);      //Load row 6 data
+	LCD_WriteData(0x02);      //Load row 7 data
+	LCD_WriteData(0x01);      //Load row 8 data
 }
 
 
