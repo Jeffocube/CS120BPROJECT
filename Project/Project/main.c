@@ -12,6 +12,10 @@ unsigned char joyUp;
 unsigned char joyDown;
 unsigned char joyLeft;
 unsigned char joyRight;
+unsigned char joyUp2;
+unsigned char joyDown2;
+unsigned char joyLeft2;
+unsigned char joyRight2;
 //Global variables for creating messages================================================
 unsigned char keyChar;
 unsigned short keyCharLen;
@@ -54,12 +58,6 @@ void receive_string(char* stringswapped){
 	for(unsigned j = 0; j < 16; j++){
 		while ( !(UCSR0A & (1 << RXC0)) );
 		MSG2[j] = UDR0;
-		/*
-		if(stringswapped[j] == 0 && j < 15)
-			stringswapped[j] = ' ';
-		if(j == 15)
-			stringswapped[j] = 0;
-			*/
 	}
 	while ( UCSR0A & (1 << RXC0) ) { flush = UDR0; }
 	LCD_Cursor(0);
@@ -152,20 +150,20 @@ int LCDTICK(int LCDSTATE){
 			if(joyRight == 0x01 && t < 11 && up == 1){
 				keyChar = 0;
 				t++;
-				joyRight = 0;
+				joyRight2 = 1;
 			}
 			if(joyLeft == 0x01 && t > 0 && up == 1){
 				keyChar = 0;
 				t--;
-				joyLeft = 0;
+				joyLeft2 = 1;
 			}
 			if(joyRight == 0x01 && t < 32 && up == 0){
 				t++;
-				joyRight = 0;
+				joyRight2 = 1;
 			}
 			if(joyLeft == 0x01 && t > 16 && up == 0){
 				t--;
-				joyLeft = 0;
+				joyLeft2 = 1;
 			}
 			LCD_Cursor(MSGSIZE + t + 1);
 			if(READYTOSEND == 1){
@@ -314,33 +312,33 @@ int KeyBoardTick(int KeyState){
 
 
 void LCD_build(){
-	LCD_WriteCommand(0x48);       //Load the location where we want to store
+	LCD_WriteCommand(0x48);
 	LCD_WriteData(0x00);
-	LCD_WriteData(0x10);      //Load row 1 data
-	LCD_WriteData(0x30);      //Load row 2 data
-	LCD_WriteData(0x70);      //Load row 4 data
-	LCD_WriteData(0xFF);      //Load row 5 data
-	LCD_WriteData(0xFF);      //Load row 6 data
-	LCD_WriteData(0xFF);      //Load row 7 data
-	LCD_WriteData(0xFF);      //Load row 8 data
-	LCD_WriteCommand(0x50);       //Load the location where we want to store
+	LCD_WriteData(0x10);
+	LCD_WriteData(0x30);
+	LCD_WriteData(0x70);
+	LCD_WriteData(0xFF);
+	LCD_WriteData(0xFF);
+	LCD_WriteData(0xFF);
+	LCD_WriteData(0xFF);
+	LCD_WriteCommand(0x50);
 	LCD_WriteData(0x00);
-	LCD_WriteData(0x00);      //Load row 1 data
-	LCD_WriteData(0x00);      //Load row 2 data
-	LCD_WriteData(0x24);      //Load row 4 data
-	LCD_WriteData(0x00);      //Load row 5 data
-	LCD_WriteData(0x42);      //Load row 6 data
-	LCD_WriteData(0x24);      //Load row 7 data
-	LCD_WriteData(0x18);      //Load row 8 data
-	LCD_WriteCommand(0x58);       //Load the location where we want to store
 	LCD_WriteData(0x00);
-	LCD_WriteData(0x00);      //Load row 1 data
-	LCD_WriteData(0x00);      //Load row 2 data
-	LCD_WriteData(0x02);      //Load row 4 data
-	LCD_WriteData(0x00);      //Load row 5 data
-	LCD_WriteData(0x04);      //Load row 6 data
-	LCD_WriteData(0x02);      //Load row 7 data
-	LCD_WriteData(0x01);      //Load row 8 data
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x24);
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x42);
+	LCD_WriteData(0x24);
+	LCD_WriteData(0x18);
+	LCD_WriteCommand(0x58);
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x02);
+	LCD_WriteData(0x00);
+	LCD_WriteData(0x04);
+	LCD_WriteData(0x02);
+	LCD_WriteData(0x01);
 }
 
 
@@ -355,6 +353,12 @@ void LCD_build(){
 //Function to use to pull joystick input================================================
 enum JoyState {INPUTJOY};
 int JoyStickTick(int JoyState){
+	if(joyRight2 == 1){
+		joyRight = 0;
+	}
+	if(joyLeft2 == 1){
+		joyLeft = 0;
+	}
 	switch (ADMUX){
 		case 0x40 :
 			ADCSRA |= (1 << ADSC);
@@ -371,17 +375,17 @@ int JoyStickTick(int JoyState){
 			ADMUX = 0x40;
 		break;
 	}
-	if (horiz > 520 + 300){
-		joyRight = 0x01;
+	if (horiz > 820){
+		joyRight = 1;
 	}
-	if (horiz < 300){
-		joyLeft = 0x01;
+	if (horiz < 320){
+		joyLeft = 1;
 	}
-	if (vert > 520 + 300){
-		joyUp = 0x01;
+	if (vert > 820){
+		joyUp = 1;
 	}
-	if (vert < 300){
-		joyDown = 0x01;
+	if (vert < 320){
+		joyDown = 1;
 	}
 	if(vert >= 420 && vert <=620){
 		joyUp = 0;
@@ -405,6 +409,15 @@ int JoyStickTick(int JoyState){
 
 int main(void)
 {
+	
+	joyUp = 0;
+	joyDown = 0;
+	joyLeft = 0;
+	joyRight = 0;
+	joyUp2 = 0;
+	joyDown2 = 0;
+	joyLeft2 = 0;
+	joyRight2 = 0;
 	sent = 0;
 	received = 0;
 	
@@ -416,7 +429,6 @@ int main(void)
 	UBRR0L = BAUD_PRESCALE;
 	UBRR0H = (BAUD_PRESCALE >> 8);
 	
-	//eeprom_update_block("Hello world", (void *)1, 12);
 	eeprom_read_block(MSG2, 0x01, 12);
 	
 	up = 1;
@@ -474,6 +486,5 @@ int main(void)
 		//Remember to add timer to code
 		while(!TimerFlag);
 		TimerFlag = 0;
-		//LCD_ClearScreen();
 	}
 }
