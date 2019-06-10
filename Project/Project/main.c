@@ -131,6 +131,12 @@ int USARTTICK(int USARTSTATE){
 //Updates the strings to be displayed===================================================
 enum LCDSTATE{DISPLAY, SENDING, RECE, OKAY1, OKAY2};
 int LCDTICK(int LCDSTATE){
+	if(joyRight == 0){
+		joyRight2 = 0;
+	}
+	if(joyLeft == 0){
+		joyLeft2 = 0;
+	}
 	static unsigned char WAIT = 0;
 	switch(LCDSTATE){
 		case DISPLAY :
